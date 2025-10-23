@@ -19,7 +19,7 @@ footer{text-align:center;margin:18px 0 8px;color:#777;font-size:12px}
 .kv{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:8px}
 </style></head><body>
 <div class="wrap">
-<header><div><h1>🍱 LunchSpot – 점심 맛집 아카이브</h1><div class="muted">데이터는 lunch_data.json에서 불러옵니다. (소요시간 기준 필터)</div></div>
+<header><div><h1>🍱 LunchSpot – 점심 맛집 아카이브</h1><div class="muted">데이터가 이 파일 안에 포함되어 있습니다. (소요시간 기준 필터)</div></div>
 <div class="controls"><div class="seg"><button id="tab-rest" class="on">식당</button><button id="tab-cafe">카페</button></div>
 <select id="sort"><option value="score">정렬: 점수</option><option value="time">정렬: 소요시간</option><option value="wait">정렬: 대기</option><option value="price">정렬: 가격</option></select>
 <input id="q" type="text" placeholder="검색: 이름/음식/태그"></div></header>
@@ -86,20 +86,14 @@ function makeRenderer(RESTAURANTS, CAFES){
   }
   return render;
 }
-</script>
-<script>
-let RESTAURANTS=[], CAFES=[];
+</script><script>
+const RESTAURANTS = [];
+const CAFES = [];
+
 const tabRest=document.getElementById('tab-rest'), tabCafe=document.getElementById('tab-cafe');
-let render = ()=>{};
+const render = makeRenderer(RESTAURANTS, CAFES);
 [q,sort,t,p,w,hideUnknown].forEach(el=>el.addEventListener('input', ()=>render()));
 tabRest.addEventListener('click',()=>{dataset='restaurants';tabRest.classList.add('on');tabCafe.classList.remove('on');render();});
 tabCafe.addEventListener('click',()=>{dataset='cafes';tabCafe.classList.add('on');tabRest.classList.remove('on');render();});
-fetch('lunch_data.json').then(r=>r.json()).then(d=>{
-  RESTAURANTS = d.restaurants||[]; CAFES = d.cafes||[];
-  render = makeRenderer(RESTAURANTS, CAFES);
-  render();
-}).catch(e=>{
-  const div = document.createElement('div'); div.className='alert'; div.textContent='데이터 로드 실패: '+e;
-  document.querySelector('.wrap').insertBefore(div, document.querySelector('.grid'));
-});
+render();
 </script></div></body></html>
