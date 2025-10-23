@@ -1,0 +1,127 @@
+
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LunchSpot – 점심 맛집 아카이브</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;margin:0;background:#f7f7f8}
+.wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+header{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+h1{font-size:20px;margin:0}.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type='text'],select{padding:8px 10px;border-radius:10px;border:1px solid #ddd;background:#fff}
+input[type='range']{width:220px}.pill{padding:6px 10px;border:1px solid #ddd;border-radius:999px;background:#fff;font-size:12px;cursor:pointer}
+.pill.on{background:#111;color:#fff}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:800px){.grid{grid-template-columns:1fr}}.card{background:#fff;border:1px solid #e7e7ea;border-radius:16px;padding:14px}
+.muted{color:#666;font-size:12px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.tag{background:#f0f0f3;color:#444;padding:2px 6px;border-radius:999px;font-size:10px;margin-right:4px;display:inline-block}
+.seg{display:inline-flex;border:1px solid #ddd;border-radius:12px;overflow:hidden;background:#fff}
+.seg button{padding:6px 10px;border:0;background:transparent;cursor:pointer}.seg button.on{background:#111;color:#fff}
+footer{text-align:center;margin:18px 0 8px;color:#777;font-size:12px}
+.alert{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;border-radius:10px;margin:8px 0;font-size:12px}
+.kv{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:8px}
+</style></head><body>
+<div class="wrap">
+<header><div><h1>🍱 LunchSpot – 점심 맛집 아카이브</h1><div class="muted">이 파일 하나로 동작합니다. (소요시간 기준 필터)</div></div>
+<div class="controls"><div class="seg"><button id="tab-rest" class="on">식당</button><button id="tab-cafe">카페</button></div>
+<select id="sort"><option value="score">정렬: 점수</option><option value="time">정렬: 소요시간</option><option value="wait">정렬: 대기</option><option value="price">정렬: 가격</option></select>
+<input id="q" type="text" placeholder="검색: 이름/음식/태그"></div></header>
+<section class="controls" style="margin-bottom:12px;">
+  <div class="kv">최대 도보시간: <span id="tOut">15</span>분 <input id="t" type="range" min="3" max="30" step="1" value="15"></div>
+  <div class="kv">최대 가격: ₩<span id="pOut">15000</span> <input id="p" type="range" min="4000" max="20000" step="500" value="15000"></div>
+  <div class="kv">최대 대기: <span id="wOut">20</span>분 <input id="w" type="range" min="0" max="40" step="1" value="20"></div>
+  <label class="kv" style="margin-left:0;"><input id="hideUnknownTime" type="checkbox"> 소요시간 정보 없는 가게 숨기기</label>
+</section>
+<div class="muted" id="count"></div>
+<div id="hint" class="alert" style="display:none;">가게가 안 보이면: (1) 검색을 비우고 (2) 소요시간을 넓히고 (3) 체크박스 해제해보세요.</div>
+<div class="grid" id="grid"></div>
+<footer>점수 = 0.35·맛 + 0.25·속도 + 0.2·가성비 + 0.1·건강 + 0.1·쾌적 (1–5)</footer>
+
+<script>
+const RESTAURANTS = [{"id": "area-spot-001", "name": "쌍대포맷돌순두부", "cuisine": "순두부찌개", "tags": ["한식", "정갈", "뜨끈"], "address": "https://naver.me/GSDA3Rf2", "area": "백상빌딩", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "맷돌 순두부", "website": null, "phone": null, "open_hours": null, "notes": "뜨끈한 순두부. 웨이팅 있음", "speed_rating_1_5": 4, "taste_rating_1_5": 5, "value_rating_1_5": 4, "health_rating_1_5": 4, "comfort_rating_1_5": 5, "lunch_score": 5.0}, {"id": "area-2-002", "name": "별미볶음점(2호점도 있음)", "cuisine": "직화볶음", "tags": ["한식", "든든", "매콤"], "address": "https://naver.me/GXApctda", "area": "여의도백화점, 백상빌딩", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "오삼직화", "website": null, "phone": null, "open_hours": null, "notes": "밥 추가가능, 계란찜 추천", "speed_rating_1_5": 4, "taste_rating_1_5": 5, "value_rating_1_5": 4, "health_rating_1_5": 3, "comfort_rating_1_5": 4, "lunch_score": 5.0}, {"id": "area-spot-003", "name": "장수한방 삼계탕", "cuisine": "한방삼계탕", "tags": ["한식", "한방", "뜨끈"], "address": "https://naver.me/5oEcSlQp", "area": "여의도백화점", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "한방삼계탕", "website": null, "phone": null, "open_hours": null, "notes": "반계탕 옵션 있음", "speed_rating_1_5": 4, "taste_rating_1_5": 5, "value_rating_1_5": 3, "health_rating_1_5": 5, "comfort_rating_1_5": 5, "lunch_score": 4.5}, {"id": "area-spot-004", "name": "한미옥", "cuisine": "솥밥정식", "tags": ["한식", "고급", "고기"], "address": "https://naver.me/GL8ir48g", "area": "바로 옆", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 1, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "무 솥밥정식", "website": null, "phone": null, "open_hours": null, "notes": "직접 구워주심, 찌개도 나옴", "speed_rating_1_5": 3, "taste_rating_1_5": 5, "value_rating_1_5": 3, "health_rating_1_5": 4, "comfort_rating_1_5": 5, "lunch_score": 4.0}, {"id": "area-spot-005", "name": "후라토식당 여의도직영점", "cuisine": "규카츠, 오므라이스", "tags": ["일식", "메뉴많음", "혼밥가능"], "address": "https://naver.me/GQ1lirNo", "area": "파이낸스타워", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "규카츠", "website": null, "phone": null, "open_hours": null, "notes": "비싸지만 맛있음", "speed_rating_1_5": 3, "taste_rating_1_5": 5, "value_rating_1_5": 2, "health_rating_1_5": 3, "comfort_rating_1_5": 4, "lunch_score": 4.0}, {"id": "im-spot-006", "name": "야마야", "cuisine": "일본가정식", "tags": ["일식", "종류많음"], "address": "https://naver.me/Fw7iBwyq", "area": "iM증권빌딩", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": 5, "price_min_krw": null, "price_max_krw": null, "signature_dish": "특선 런치 정식", "website": null, "phone": null, "open_hours": null, "notes": "반찬에 명란젓이 있음", "speed_rating_1_5": 4, "taste_rating_1_5": 5, "value_rating_1_5": 3, "health_rating_1_5": 3, "comfort_rating_1_5": 3, "lunch_score": 4.0}, {"id": "area-spot-007", "name": "니즈버거", "cuisine": "햄버거", "tags": ["양식", "수제버거", "혼밥가능"], "address": "https://naver.me/xExWUd8Y", "area": "교보증권빌딩", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "니즈버거 세트", "website": null, "phone": null, "open_hours": null, "notes": null, "speed_rating_1_5": 3, "taste_rating_1_5": 5, "value_rating_1_5": 4, "health_rating_1_5": 2, "comfort_rating_1_5": 4, "lunch_score": 4.0}, {"id": "area-spot-008", "name": "은희네 해장국", "cuisine": "해장국", "tags": ["한식", "얼큰", "뜨끈"], "address": "https://naver.me/5T4AupdN", "area": "포스트타워", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "해장국", "website": null, "phone": null, "open_hours": null, "notes": "진짜 빨리나옴. 맵기 직접 조절. 다진 마늘 넣기", "speed_rating_1_5": 5, "taste_rating_1_5": 5, "value_rating_1_5": 4, "health_rating_1_5": 3, "comfort_rating_1_5": 4, "lunch_score": 4.5}, {"id": "area-spot-009", "name": "교직원공제회 구내식당", "cuisine": "구내식당", "tags": ["한식", "식단표", "가성비"], "address": null, "area": "한국교직원공제회", "latitude": null, "longitude": null, "distance_km": null, "walking_time_min": 5, "lunch_peak_wait_min": null, "avg_wait_min": null, "price_min_krw": null, "price_max_krw": null, "signature_dish": "식권구매", "website": null, "phone": null, "open_hours": null, "notes": "샌디 앱에서 식단표 확인가능. 반찬 및 샐러드 셀프바. 밥 추가 가능", "speed_rating_1_5": 5, "taste_rating_1_5": 4, "value_rating_1_5": 5, "health_rating_1_5": 5, "comfort_rating_1_5": 4, "lunch_score": 5.0}];
+const CAFES = [];
+
+function normTags(v){ if(!v) return []; return Array.isArray(v)?v:String(v).split(',').map(s=>s.trim()).filter(Boolean); }
+function isFiniteNumber(n){ return typeof n==='number' && isFinite(n); }
+function computeWalk(r){ 
+  if(isFiniteNumber(r.walking_time_min)) return r.walking_time_min; 
+  if(isFiniteNumber(r.distance_km)) return Math.round(r.distance_km*1000/80);
+  return undefined;
+}
+function clamp01(n){ return Math.max(0, Math.min(1, n)); }
+function score5(r){ 
+  const t=clamp01((r.taste_rating_1_5||0)/5), s=clamp01((r.speed_rating_1_5||0)/5), v=clamp01((r.value_rating_1_5||0)/5), h=clamp01((r.health_rating_1_5||0)/5), c=clamp01((r.comfort_rating_1_5||0)/5); 
+  return +((0.35*t+0.25*s+0.2*v+0.1*h+0.1*c)*5).toFixed(2); 
+}
+function normalize(list){ 
+  return list.map(r=>({ 
+    ...r, 
+    tags: normTags(r.tags),
+    walking_time_min: computeWalk(r),
+    lunch_score: isFiniteNumber(r.lunch_score) ? r.lunch_score : score5(r)
+  })); 
+}
+function won(n){ return (typeof n==='number' && isFinite(n)) ? n.toLocaleString('ko-KR') : '—'; }
+
+let dataset='restaurants';
+const $=sel=>document.querySelector(sel);
+const q=$('#q'), sort=$('#sort'), t=$('#t'), p=$('#p'), w=$('#w'), tOut=$('#tOut'), pOut=$('#pOut'), wOut=$('#wOut'), grid=$('#grid'), count=$('#count'), tabRest=$('#tab-rest'), tabCafe=$('#tab-cafe'), hideUnknown=$('#hideUnknownTime'), hint=$('#hint');
+
+function dataNow(){ return normalize(dataset==='cafes'?CA'+'FES:RESTAURANTS); }
+
+function render(){
+  try {
+    tOut.textContent=t.value; pOut.textContent=p.value; wOut.textContent=w.value;
+    const data=dataNow().filter(r=>{
+      const wt = computeWalk(r);
+      const passTime = (isFiniteNumber(wt) ? (wt <= +t.value) : !hideUnknown.checked);
+      const passPrice = (isFiniteNumber(r.price_min_krw)?r.price_min_krw:0) <= +p.value;
+      const passWait = (isFiniteNumber(r.lunch_peak_wait_min)?r.lunch_peak_wait_min:0) <= +w.value;
+      const ql=q.value.trim().toLowerCase();
+      const hay=[r.name,r.cuisine,r.area,r.signature_dish,r.address,(r.tags||[]).join(' ')].join(' ').toLowerCase();
+      const passSearch = ql ? hay.includes(ql) : true;
+      return passTime && passPrice && passWait && passSearch;
+    }).sort((a,b)=> 
+      sort.value==='score' ? (a.lunch_score||0)<(b.lunch_score||0)?1:-1 :
+      sort.value==='time'  ? ((computeWalk(a)??999)-(computeWalk(b)??999)) :
+      sort.value==='wait'  ? ((isFiniteNumber(a.lunch_peak_wait_min)?a.lunch_peak_wait_min:0)-(isFiniteNumber(b.lunch_peak_wait_min)?b.lunch_peak_wait_min:0)) :
+                             ((isFiniteNumber(a.price_min_krw)?a.price_min_krw:0)-(isFiniteNumber(b.price_min_krw)?b.price_min_krw:0))
+    );
+    count.textContent=`${data.length} 곳`;
+    hint.style.display = data.length ? 'none' : 'block';
+    grid.innerHTML=data.map(r=>`<div class="card">
+      <div style="display:flex;justify-content:space-between;gap:8px;">
+        <div>
+          <div style="font-weight:700;">${r.name??'—'}</div>
+          <div class="muted">${r.cuisine??'—'} · ${r.area??''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:18px;font-weight:700;">${isFiniteNumber(r.lunch_score)?r.lunch_score.toFixed(1):'—'}</div>
+          <div class="muted">lunch score</div>
+        </div>
+      </div>
+      <div class="row">
+        <div>💸 가격: ₩${won(r.price_min_krw)}–₩${won(r.price_max_krw)}</div>
+        <div>🚶 소요시간: ${computeWalk(r)??'—'}분 ${isFiniteNumber(r.distance_km)?`(<span class="muted">${r.distance_km} km</span>)`:''}</div>
+        <div>⏱️ 대기(피크): ${isFiniteNumber(r.lunch_peak_wait_min)?r.lunch_peak_wait_min:'—'}분</div>
+        <div>🥗 시그니처: ${r.signature_dish??'—'}</div>
+      </div>
+      <div style="margin-top:6px;">${(r.tags||[]).map(t=>`<span class="tag">${t}</span>`).join(' ')}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        ${(r.latitude&&r.longitude)?`<a class="pill" href="https://www.google.com/maps/search/?api=1&query=${r.latitude},${r.longitude}" target="_blank">Google Maps</a>`:''}
+        <a class="pill" href="https://map.naver.com/v5/search/${encodeURIComponent(r.name||'')} " target="_blank">Naver Map</a>
+        ${r.website?`<a class="pill" href="${r.website}" target="_blank">Website</a>`:''}
+      </div>
+    </div>`).join('');
+  } catch(e) {
+    console.error(e);
+    document.getElementById('grid').innerHTML = `<div class="alert">렌더링 오류: ${String(e)}</div>`;
+  }
+}
+
+[q,sort,t,p,w,hideUnknown].forEach(el=> el.addEventListener('input', render));
+const tabRest = document.getElementById('tab-rest');
+const tabCafe = document.getElementById('tab-cafe');
+tabRest.addEventListener('click',()=>{dataset='restaurants';tabRest.classList.add('on');tabCafe.classList.remove('on');render();});
+tabCafe.addEventListener('click',()=>{dataset='cafes';tabCafe.classList.add('on');tabRest.classList.remove('on');render();});
+
+render();
+</script>
+</div></body></html>
